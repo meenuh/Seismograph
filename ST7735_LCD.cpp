@@ -67,5 +67,69 @@ static const uint8_t Rcmd3[] = {
 };
 
 void ST7735_LCD::initLCD(){
+	//SPI set up
+	this->setupSPI();
+}
 
+//uses SSP1
+void ST7735_LCD::setupSPI(){
+	//config gpio port to be used for cs
+	LPC_PINCON->PINSEL0 &= ~(3 << 12);
+	LPC_GPIO0->FIODIR |= (1 << 6); //currently set as output
+
+	//set power to ssp1 and clk
+	LPC_SC->PCONP |= (1 << 10);
+	LPC_PINCON->PINSEL0 &= ~(3 << 20);
+	LPC_PINCON->PINSEL0 |= (1 << 20);
+
+	//select pins to enable to be used as MOSI, MISO, and SCK
+	LPC_PINCON->PINSEL0 &= ~( (3 << 14) | (3 << 16) | (3 << 18) );
+	LPC_PINCON->PINSEL0 |=  ( (2 << 14) | (2 << 16) | (2 << 18) );
+
+	//set up control registers
+	LPC_SSP1->CR0 = 7;
+	LPC_SSP1->CR1 = (1 << 1);
+	LPC_SSP1->CPSR = 8;
+}
+
+void ST7735_LCD::SPI_writecommand(uint8_t c){
+	this->SPI_enable();
+	this->SPI_exchangeByte(c);
+	this->SPI_disable();
+}
+
+void ST7735_LCD::commandList(const uint8_t *addr){
+	uint8_t numCommands, numArgs;
+	uint16_t ms;
+
+	numCommands = addr[0]; //first element contains number of commands to iterate through
+	addr++;
+	while(numCommands--){
+		this->SPI_writecommand((*addr)++);
+		numArgs = (*addr)++;
+		ms = numArgs & DELAY;
+		numArgs &= ~DELAY;
+		while(numArgs--)
+			this->SPI_writecommand((*addr)++);
+	}
+
+	if(ms){
+		ms = (*addr)++;
+		if(ms == 255) ms = 500;
+		vTaskDelay(ms);
+	}
+}
+
+char ST7735_LCD::SPI_exchangeByte(char out){
+	LPC_SSP1->DR = out;
+	while(LPC_SSP1->SR & (1 << 4));
+	return LPC_SSP1->DR;
+}
+
+void ST7735_LCD::SPI_enable(){
+	LPC_GPIO0->FIOCLR = (1 << 12);
+}
+
+void ST7735_LCD::SPI_disable(){
+	LPC_GPIO0->FIOSET = (1 << 12);
 }

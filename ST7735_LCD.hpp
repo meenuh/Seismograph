@@ -35,6 +35,13 @@ class ST7735_LCD
 public:
 	ST7735_LCD();
 	void initLCD();
+	char SPI_exchangeByte(char out);
+	void commandList(const uint8_t *addr);
+	void SPI_writecommand(uint8_t c);
+private:
+	void setupSPI();
+	void SPI_enable();
+	void SPI_disable();
 
 };
 
