@@ -1,6 +1,7 @@
 #include "ST7735_LCD.hpp"
 #include <LPC17xx.h> //for memory mapped values
 
+//part one
 static const uint8_t commands[] = {
 		15,							// # of commands in this array
 		ST7735_SWRESET, DELAY,		// 1: Software reset with delays
@@ -33,6 +34,36 @@ static const uint8_t commands[] = {
 		0xC8,						//    row addr/col addr, bottom to top refresh
 		ST7735_COLMOD, 1,			//15: set color mode - 1 arg - no delay
 		0x05						//    16 bit color
+};
+
+//part two
+static const uint8_t Rcmd2green[] = {
+		2,							// 2 commands in the list
+		ST7735_CASET, 4,			// 1: Column address set - 4 args - no delay
+		0x00, 0x02,					//    XSTART = 0
+		0x00, 0x7F+0x02,			//    XEND = 127
+		ST7735_RASET, 4,			// 2: Row address set - 4 args - no delay
+		0x00, 0x01,					//    XSTART = 0
+		0x00, 0x9F+0x01				//    XEND = 159
+};
+
+//part 3
+static const uint8_t Rcmd3[] = {
+		4,							// 4 commands in list
+		ST7735_GMCTRP1, 16,			// 1: Magical unicorn dust - 16 args - no delay
+		0x02, 0x1c, 0x07, 0x12,
+		0x37, 0x32, 0x29, 0x2d,
+		0x29, 0x25, 0x2B, 0x39,
+		0x00, 0x01, 0x03, 0x10,
+		ST7735_GMCTRN1, 16,			// 2: Sparkles and rainbows - 16 args - no delay
+	    0x03, 0x1d, 0x07, 0x06,
+	    0x2E, 0x2C, 0x29, 0x2D,
+	    0x2E, 0x2E, 0x37, 0x3F,
+		0x00, 0x00, 0x02, 0x10,
+		ST7735_NORON, DELAY,		// 3: Normal display on - no args - with delay
+		10, 						//    10 ms delay
+		ST7735_DISPON, DELAY,		// 4: Main screen turn on - no args - with delay
+		100							//    100 ms delay
 };
 
 void ST7735_LCD::initLCD(){
