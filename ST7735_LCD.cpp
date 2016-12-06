@@ -1,6 +1,8 @@
 #include "ST7735_LCD.hpp"
 #include <LPC17xx.h> //for memory mapped values
 
+//TODO change SPI names to LCD for clarity/avoid confusion
+
 //part one
 static const uint8_t commands[] = {
 		15,							// # of commands in this array
@@ -69,6 +71,9 @@ static const uint8_t Rcmd3[] = {
 void ST7735_LCD::initLCD(){
 	//SPI set up
 	this->setupSPI();
+	this->commandList(commands);
+	this->commandList(Rcmd2green);
+	this->commandList(Rcmd3);
 }
 
 //uses SSP1
