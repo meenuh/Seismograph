@@ -48,16 +48,14 @@ static const uint8_t commands[] = {                 // Init for 7735R, part 1 (r
 	    ST7735_COLMOD , 1      ,  // 15: set color mode, 1 arg, no delay:
 	      0x05 };
 
-//part two
-static uint8_t Rcmd2green[] = {
-		2,							// 2 commands in the list
-		ST7735_CASET, 4,			// 1: Column address set - 4 args - no delay
-		0x00, 0x02,					//    XSTART = 0
-		0x00, 0x7F+0x02,			//    XEND = 127
-		ST7735_RASET, 4,			// 2: Row address set - 4 args - no delay
-		0x00, 0x01,					//    XSTART = 0
-		0x00, 0x9F+0x01				//    XEND = 159
-};
+static uint8_t Rcmd2green[] = {              // Init for 7735R, part 2 (red tab only)
+  2,                        //  2 commands in list:
+  ST7735_CASET  , 4      ,  //  1: Column addr set, 4 args, no delay:
+    0x00, 0x00,             //     XSTART = 0
+    0x00, 0x7F,             //     XEND = 127
+  ST7735_RASET  , 4      ,  //  2: Row addr set, 4 args, no delay:
+    0x00, 0x00,             //     XSTART = 0
+    0x00, 0x9F };
 
 //part 3
 static  uint8_t Rcmd3[] = {
@@ -78,35 +76,54 @@ static  uint8_t Rcmd3[] = {
 		100							//    100 ms delay
 };
 
-ST7735_LCD::ST7735_LCD(){
+ST7735_LCD::ST7735_LCD(uint8_t priority) : scheduler_task("LCD", 2048, priority) {
 
 }
 
-void ST7735_LCD::initLCD(){
+bool ST7735_LCD::init(){
 	//SPI set up
-	u0_dbg_printf("before setup\n");
 	setupSPI();
-	u0_dbg_printf("after setup\n");
+	//u0_dbg_printf("befor set command\n");
 	commandList(commands);
-	u0_dbg_printf("command list 1\n");
+	//u0_dbg_printf("222222 set command\n");
 	commandList(Rcmd2green);
-	u0_dbg_printf("command list 2\n");
+	//u0_dbg_printf("33333 set command\n");
 	commandList(Rcmd3);
-	u0_dbg_printf("command list 3\n");
+	//u0_dbg_printf("44444 set command\n");
+    LCD_writecommand(ST7735_MADCTL);
+    //u0_dbg_printf("5555 set command\n");
+    LCD_writedata(0xC0);
+	return true;
 }
 
-//uses SSP1
+bool ST7735_LCD::run(void *p){
+	//u0_dbg_printf("rect\n");
+	//fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_WHITE);
+	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_CYAN);
+	delay_ms(500);
+	return true;
+}
+
+/** SSP1
+ * 0.0 - CS
+ * 0.1 - reset
+ * 1.29 - DC
+ */
 void ST7735_LCD::setupSPI(){
 	//config gpio port to be used for cs
+	u0_dbg_printf("start init\n");
 	LPC_PINCON->PINSEL0 &= ~(3 << 0);
 	LPC_GPIO0->FIODIR |= (1 << 0); //currently set as output
-	//LPC_GPIO0->FIOSET = (1 << 0);
 
 	//config gpio port to be used for rst
 	LPC_PINCON->PINSEL0 &= ~(3 << 2);
 	LPC_GPIO0->FIODIR |= (1 << 1); //currently set as output
 
-	LPC_GPIO0->FIOCLR = (1 << 1); //disable reset
+	//config gpio port for DC 1.29
+	LPC_PINCON->PINSEL3 &= ~(3 << 26);
+	LPC_GPIO1->FIODIR |= (1 << 29);
+
+	LPC_GPIO0->FIOSET = (1 << 1); //disable reset
 
 	//set power to ssp1 and clk
 	LPC_SC->PCONP |= (1 << 10);
@@ -123,40 +140,93 @@ void ST7735_LCD::setupSPI(){
 	LPC_SSP1->CR0 = 7;
 	LPC_SSP1->CR1 = (1 << 1);
 	LPC_SSP1->CPSR = 8;
+	u0_dbg_printf("done\n");
 }
 
-void ST7735_LCD::SPI_writecommand(uint8_t c){
-	SPI_enable();
+void ST7735_LCD::fillrect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint32_t color) {
+
+	int32_t width, height;
+
+	width = x1 - x0 + 1;
+	height = y1 - y0 + 1;
+	setAddrWindow(x0, y0, x1, y1);
+	//LCD_writecommand(ST7735_RAMWR);
+	writeRGB(color, width * height);
+}
+//0x07E0
+void ST7735_LCD::writeRGB(uint32_t color, uint32_t repeat) {
+	uint8_t red, green, blue;
+	int i;
+	red = (color >> 16);
+	green = (color >> 8) & 0xFF;
+	blue = color & 0xFF;
+	for (i = 0; i < repeat; i++) {
+		LCD_writedata(red);
+		LCD_writedata(green);
+		LCD_writedata(blue);
+	}
+}
+
+void ST7735_LCD::LCD_writecommand(uint8_t c){
+	LPC_GPIO1->FIOCLR |= (1 << 29);
 	SPI_exchangeByte(c);
-	SPI_disable();
 }
 
+void ST7735_LCD::LCD_writedata(uint8_t c){
+	LPC_GPIO1->FIOSET |= (1 << 29);
+	SPI_exchangeByte(c);
+}
 void ST7735_LCD::commandList(const uint8_t *addr){
-	 uint8_t  numCommands, numArgs;
-	  uint16_t ms;
+	uint8_t numCommands, numArgs;
+	uint16_t ms;
 
-	  numCommands = pgm_read_byte(addr++);   // Number of commands to follow
-	  while(numCommands--) {
-	    SPI_writecommand(pgm_read_byte(addr++)); //   Read, issue command
-	    numArgs  = pgm_read_byte(addr++);    //   Number of args to follow
-	    ms       = numArgs & DELAY;          //   If hibit set, delay follows args
-	    numArgs &= ~DELAY;                   //   Mask out delay bit
-	    while(numArgs--) {                   //   For each argument...
-	      SPI_writecommand(pgm_read_byte(addr++));  //     Read, issue argument
-	    }
+	numCommands = pgm_read_byte(addr++);   // Number of commands to follow
+	while (numCommands--) {
+		LCD_writecommand(pgm_read_byte(addr++)); //   Read, issue command
+		numArgs = pgm_read_byte(addr++);    //   Number of args to follow
+		ms = numArgs & DELAY;          //   If hibit set, delay follows args
+		numArgs &= ~DELAY;                   //   Mask out delay bit
+		while (numArgs--) {                   //   For each argument...
+			LCD_writedata(pgm_read_byte(addr++));  //     Read, issue argument
+		}
 
-	    if(ms) {
-	      ms = pgm_read_byte(addr++); // Read post-command delay time (ms)
-	      if(ms == 255) ms = 500;     // If 255, delay for 500 ms
-	      delay_ms(ms);
-	    }
-	  }
+		if (ms) {
+			ms = pgm_read_byte(addr++); // Read post-command delay time (ms)
+			if (ms == 255)
+				ms = 500;     // If 255, delay for 500 ms
+			delay_ms(ms);
+		}
+	}
+}
+
+void ST7735_LCD::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
+//	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_WHITE);
+//	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_GREEN); 80 a0 07e0
+	LCD_writecommand(ST7735_CASET);
+	LCD_writedata(0x00);
+	LCD_writedata(x0);
+	LCD_writedata(0x00);
+	LCD_writedata(x1);
+
+	LCD_writecommand(ST7735_RASET);
+	LCD_writedata(0x00);
+	LCD_writedata(y0);
+	LCD_writedata(0x00);
+	LCD_writedata(y1);
+	LCD_writecommand(ST7735_RAMWR); // write to RAM
+
 }
 
 char ST7735_LCD::SPI_exchangeByte(char out){
+	char temp;
+
+	SPI_enable();
 	LPC_SSP1->DR = out;
 	while(LPC_SSP1->SR & (1 << 4));
-	return LPC_SSP1->DR;
+	temp = LPC_SSP1->DR;
+	SPI_disable();
+	return temp;
+
 }
 
 void ST7735_LCD::SPI_enable(){

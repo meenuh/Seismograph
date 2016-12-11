@@ -10,7 +10,13 @@
  #define pgm_read_byte(addr) (*(const unsigned char *)(addr))
 #endif
 
+#ifndef _swap_int16_t
+#define _swap_int16_t(a, b) { int16_t t = a; a = b; b = t; }
+#endif
+
 #define DELAY 0x80
+#define ST7735_TFTWIDTH  128
+#define ST7735_TFTHEIGHT  160
 
 #define ST7735_NOP     0x00
 #define ST7735_SWRESET 0x01
@@ -68,14 +74,19 @@
 #define ST7735_YELLOW  0xFFE0
 #define ST7735_WHITE   0xFFFF
 
-class ST7735_LCD
+class ST7735_LCD: public scheduler_task
 {
 public:
-	ST7735_LCD();
-	void initLCD();
+	ST7735_LCD(uint8_t priority);
+	bool init();
+	bool run(void *p);
 	char SPI_exchangeByte(char out);
 	void commandList(const uint8_t *addr);
-	void SPI_writecommand(uint8_t c);
+	void LCD_writecommand(uint8_t c);
+	void LCD_writedata(uint8_t c);
+	void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
+	void fillrect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint32_t color);
+	void writeRGB(uint32_t color, uint32_t repeat);
 private:
 	void setupSPI();
 	void SPI_enable();
