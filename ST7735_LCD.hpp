@@ -67,6 +67,7 @@
 // Color definitions
 #define	ST7735_BLACK   0x0000
 #define	ST7735_BLUE    0x001F
+//1111100000000000
 #define	ST7735_RED     0xF800
 #define	ST7735_GREEN   0x07E0
 #define ST7735_CYAN    0x07FF
@@ -85,8 +86,9 @@ public:
 	void LCD_writecommand(uint8_t c);
 	void LCD_writedata(uint8_t c);
 	void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
-	void fillrect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint32_t color);
-	void writeRGB(uint32_t color, uint32_t repeat);
+	void fillrect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
+	void writeRGB(uint16_t color, uint32_t repeat);
+	void drawPixel(int16_t x, int16_t y, uint16_t color);
 private:
 	void setupSPI();
 	void SPI_enable();

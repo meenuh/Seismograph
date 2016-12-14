@@ -7,9 +7,6 @@
 
 #include "ST7735_LCD.hpp"
 
-//TODO change SPI names to LCD for clarity/avoid confusion
-//TODO set reset pin and DC pin to GPIO
-
 //part one
 static const uint8_t commands[] = {                 // Init for 7735R, part 1 (red or green tab)
 	    15,                       // 15 commands in list:
@@ -44,7 +41,7 @@ static const uint8_t commands[] = {                 // Init for 7735R, part 1 (r
 	      0x0E,
 	    ST7735_INVOFF , 0      ,  // 13: Don't invert display, no args, no delay
 	    ST7735_MADCTL , 1      ,  // 14: Memory access control (directions), 1 arg:
-	      0xC8,                   //     row addr/col addr, bottom to top refresh
+	      0xC0,                   //     row addr/col addr, bottom to top refresh
 	    ST7735_COLMOD , 1      ,  // 15: set color mode, 1 arg, no delay:
 	      0x05 };
 
@@ -55,7 +52,8 @@ static uint8_t Rcmd2green[] = {              // Init for 7735R, part 2 (red tab 
     0x00, 0x7F,             //     XEND = 127
   ST7735_RASET  , 4      ,  //  2: Row addr set, 4 args, no delay:
     0x00, 0x00,             //     XSTART = 0
-    0x00, 0x9F };
+    0x00, 0x9F
+};
 
 //part 3
 static  uint8_t Rcmd3[] = {
@@ -83,24 +81,28 @@ ST7735_LCD::ST7735_LCD(uint8_t priority) : scheduler_task("LCD", 2048, priority)
 bool ST7735_LCD::init(){
 	//SPI set up
 	setupSPI();
-	//u0_dbg_printf("befor set command\n");
+
 	commandList(commands);
-	//u0_dbg_printf("222222 set command\n");
 	commandList(Rcmd2green);
-	//u0_dbg_printf("33333 set command\n");
 	commandList(Rcmd3);
-	//u0_dbg_printf("44444 set command\n");
+
     LCD_writecommand(ST7735_MADCTL);
-    //u0_dbg_printf("5555 set command\n");
     LCD_writedata(0xC0);
+	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_GREEN);
 	return true;
 }
 
 bool ST7735_LCD::run(void *p){
-	//u0_dbg_printf("rect\n");
-	//fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_WHITE);
-	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_CYAN);
-	delay_ms(500);
+	static int x = 0;
+
+	if(x == 0) {
+	for(int i = 0; i < ST7735_TFTHEIGHT; i++){
+		drawPixel(5, i, ST7735_RED);
+	}
+	x++;
+	}
+
+	delay_ms(1000);
 	return true;
 }
 
@@ -111,7 +113,6 @@ bool ST7735_LCD::run(void *p){
  */
 void ST7735_LCD::setupSPI(){
 	//config gpio port to be used for cs
-	u0_dbg_printf("start init\n");
 	LPC_PINCON->PINSEL0 &= ~(3 << 0);
 	LPC_GPIO0->FIODIR |= (1 << 0); //currently set as output
 
@@ -140,30 +141,24 @@ void ST7735_LCD::setupSPI(){
 	LPC_SSP1->CR0 = 7;
 	LPC_SSP1->CR1 = (1 << 1);
 	LPC_SSP1->CPSR = 8;
-	u0_dbg_printf("done\n");
 }
 
-void ST7735_LCD::fillrect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint32_t color) {
+void ST7735_LCD::fillrect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {
 
-	int32_t width, height;
+	int16_t width, height;
 
 	width = x1 - x0 + 1;
 	height = y1 - y0 + 1;
 	setAddrWindow(x0, y0, x1, y1);
-	//LCD_writecommand(ST7735_RAMWR);
 	writeRGB(color, width * height);
 }
-//0x07E0
-void ST7735_LCD::writeRGB(uint32_t color, uint32_t repeat) {
-	uint8_t red, green, blue;
+
+void ST7735_LCD::writeRGB(uint16_t color, uint32_t repeat) {
 	int i;
-	red = (color >> 16);
-	green = (color >> 8) & 0xFF;
-	blue = color & 0xFF;
+
 	for (i = 0; i < repeat; i++) {
-		LCD_writedata(red);
-		LCD_writedata(green);
-		LCD_writedata(blue);
+		LCD_writedata(color >> 8);
+		LCD_writedata(color);
 	}
 }
 
@@ -200,8 +195,6 @@ void ST7735_LCD::commandList(const uint8_t *addr){
 }
 
 void ST7735_LCD::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
-//	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_WHITE);
-//	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_GREEN); 80 a0 07e0
 	LCD_writecommand(ST7735_CASET);
 	LCD_writedata(0x00);
 	LCD_writedata(x0);
@@ -226,7 +219,6 @@ char ST7735_LCD::SPI_exchangeByte(char out){
 	temp = LPC_SSP1->DR;
 	SPI_disable();
 	return temp;
-
 }
 
 void ST7735_LCD::SPI_enable(){
@@ -235,6 +227,14 @@ void ST7735_LCD::SPI_enable(){
 
 void ST7735_LCD::SPI_disable(){
 	LPC_GPIO0->FIOSET = (1 << 0);
+}
+
+void ST7735_LCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
+	if((x < 0) ||(x >= ST7735_TFTWIDTH) || (y < 0) || (y >= ST7735_TFTHEIGHT)) return;
+
+	setAddrWindow(x,y,x+1,y+1);
+	LCD_writecommand(ST7735_RAMWR);
+	writeRGB(color, 1);
 }
 
 
