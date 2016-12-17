@@ -15,8 +15,8 @@
 #endif
 
 #define DELAY 0x80
-#define ST7735_TFTWIDTH  128
-#define ST7735_TFTHEIGHT  160
+#define ST7735_TFTWIDTH  160
+#define ST7735_TFTHEIGHT  128
 
 #define ST7735_NOP     0x00
 #define ST7735_SWRESET 0x01
@@ -75,6 +75,8 @@
 #define ST7735_YELLOW  0xFFE0
 #define ST7735_WHITE   0xFFFF
 
+#define MAX 100
+
 class ST7735_LCD: public scheduler_task
 {
 public:
@@ -93,6 +95,7 @@ private:
 	void setupSPI();
 	void SPI_enable();
 	void SPI_disable();
+	//char buffer[];
 
 };
 

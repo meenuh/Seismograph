@@ -6,6 +6,7 @@
  */
 
 #include "ST7735_LCD.hpp"
+#include "Analog_To_Digital.hpp"
 
 //part one
 static const uint8_t commands[] = {                 // Init for 7735R, part 1 (red or green tab)
@@ -74,9 +75,12 @@ static  uint8_t Rcmd3[] = {
 		100							//    100 ms delay
 };
 
-ST7735_LCD::ST7735_LCD(uint8_t priority) : scheduler_task("LCD", 2048, priority) {
+ST7735_LCD::ST7735_LCD(uint8_t priority) : scheduler_task("LCD", 4096, priority) {
 
 }
+
+#define X_START 159
+#define Y_START 127
 
 bool ST7735_LCD::init(){
 	//SPI set up
@@ -88,21 +92,36 @@ bool ST7735_LCD::init(){
 
     LCD_writecommand(ST7735_MADCTL);
     LCD_writedata(0xC0);
-	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_GREEN);
+	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_BLACK);
 	return true;
 }
-
+//void ST7735_LCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
 bool ST7735_LCD::run(void *p){
-	static int x = 0;
+	QueueHandle_t qid = getSharedObject(sharedQueue_ID);
+	DATA data;
+	//y x
+	//drawPixel(159,127, ST7735_RED);
 
-	if(x == 0) {
-	for(int i = 0; i < ST7735_TFTHEIGHT; i++){
-		drawPixel(5, i, ST7735_RED);
-	}
-	x++;
+	static uint16_t adcSum = 0;
+	if(xQueueReceive(qid, &data, portMAX_DELAY)){
+		//adcSum += (data.adcValue >> 4);
+		//if(data.time % 2 == 0) {
+			adcSum = adcSum / 2;
+			drawPixel(X_START - (data.time % 160), Y_START -data.adcValue, ST7735_RED);
+			adcSum = 0;
+		//}
+		//u0_dbg_printf("time %d data %x", data.time, data.adcValue);
+		//vTaskDelay(100);
+		//u0_dbg_printf("adcval %x\n", data.adcValue);*/
+
+		//delay_ms(1000);
+		//Storage::append("1:data.txt", buffer, strlen(buffer), SEEK_SET);
+		//printf("The value of time is%i\n",time);
+		//time++;
 	}
 
-	delay_ms(1000);
+
+	delay_ms(500);
 	return true;
 }
 
@@ -195,13 +214,13 @@ void ST7735_LCD::commandList(const uint8_t *addr){
 }
 
 void ST7735_LCD::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
-	LCD_writecommand(ST7735_CASET);
+	LCD_writecommand(ST7735_RASET);
 	LCD_writedata(0x00);
 	LCD_writedata(x0);
 	LCD_writedata(0x00);
 	LCD_writedata(x1);
 
-	LCD_writecommand(ST7735_RASET);
+	LCD_writecommand(ST7735_CASET);
 	LCD_writedata(0x00);
 	LCD_writedata(y0);
 	LCD_writedata(0x00);
@@ -234,7 +253,9 @@ void ST7735_LCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
 
 	setAddrWindow(x,y,x+1,y+1);
 	LCD_writecommand(ST7735_RAMWR);
-	writeRGB(color, 1);
+	LCD_writedata(color >> 8);
+	LCD_writedata(color);
+//	writeRGB(color, 1);
 }
 
 

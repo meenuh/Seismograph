@@ -26,7 +26,6 @@ bool SD_Read_Write::run(void *p){
 	uint16_t data;
 	static uint8_t time = 0;
 
-
 	if(xQueueReceive(qid, &data, portMAX_DELAY)){
 		sprintf(buffer, "%i, %x \r\n", time, data);
 			//if((time % 2) == 0){ //write every 1s
