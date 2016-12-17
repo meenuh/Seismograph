@@ -10,7 +10,6 @@
 
 Analog_To_Digital::Analog_To_Digital(uint8_t priority) :
 		scheduler_task("A2D", 2048, priority) {
-
 }
 
 bool Analog_To_Digital::init() {
@@ -27,6 +26,10 @@ bool Analog_To_Digital::init() {
 	LPC_PINCON->PINSEL3 |= (3 << 30); 	// Setting port 1 pin 31 to be analog to digital 5 turned on
 
 	//LPC_ADC->ADCR |= (1 << 24);			// This starts the A/D converter to start
+
+	// This is where we intantiate our QUEUE
+	QueueHandle_t seismographData = xQueueCreate(25,sizeof(uint16_t));
+	addSharedObject(sharedQueue_ID,seismographData);
 	return true;
 }
 
@@ -35,9 +38,9 @@ bool Analog_To_Digital::run(void *p) {
 	while((LPC_ADC->ADGDR & (1 << 31)) == 0);
 
 		adcResults = (LPC_ADC->ADGDR >> 4) & 0xFFF;
+		adcResults = (adcResults >> 4);
+		xQueueSend(getSharedObject(sharedQueue_ID),&adcResults,portMAX_DELAY); // sends the value in the queue
 		u0_dbg_printf("The results of the adc is %x\n", adcResults);
 		vTaskDelay(1000);
-
-
 	return true;
 }

@@ -11,14 +11,16 @@
 #include "tasks.hpp"
 #include <stdio.h>
 #include <LPC17xx.h> //for memory mapped values
-
+typedef enum {
+	sharedQueue_ID,	// This is the shared id between both tasks
+} sharedHandleId2_t;
 class Analog_To_Digital: public scheduler_task {
 public:
 	Analog_To_Digital(uint8_t priority);
 	bool init();
 	bool run(void *p);
 private:
-	uint32_t adcResults;
+	uint16_t adcResults;
 };
 
 #endif /* L5_APPLICATION_ANALOG_TO_DIGITAL_HPP_ */
