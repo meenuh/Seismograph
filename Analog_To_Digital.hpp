@@ -12,16 +12,20 @@
 #include <stdio.h>
 #include <LPC17xx.h> //for memory mapped values
 
+//SemaphoreHandle_t gatekeeper;
+
 typedef enum {
 	sharedQueue_ID,	// This is the shared id between both tasks
-} sharedHandleId2_t;
+	sharedMutex_ID,
+	sharedBinarySem_ID
+} sharedHandleId_t;
 
 typedef struct data{
-	unsigned int time;
+	uint32_t time;
 	uint16_t adcValue;
 }DATA;
 
-#define MAX 100
+#define MAX 50
 
 class Analog_To_Digital: public scheduler_task {
 public:

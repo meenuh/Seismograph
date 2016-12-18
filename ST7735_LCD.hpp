@@ -77,6 +77,8 @@
 
 #define MAX 100
 
+#define swap(x, y) { x = x + y; y = x - y; x = x - y; }
+
 class ST7735_LCD: public scheduler_task
 {
 public:
@@ -91,11 +93,14 @@ public:
 	void fillrect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
 	void writeRGB(uint16_t color, uint32_t repeat);
 	void drawPixel(int16_t x, int16_t y, uint16_t color);
+
+	void drawLine2(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
 private:
 	void setupSPI();
 	void SPI_enable();
 	void SPI_disable();
-	//char buffer[];
+
+	//DATA buffer[500];
 
 };
 

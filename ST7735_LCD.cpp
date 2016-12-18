@@ -93,35 +93,53 @@ bool ST7735_LCD::init(){
     LCD_writecommand(ST7735_MADCTL);
     LCD_writedata(0xC0);
 	fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_BLACK);
+
 	return true;
 }
-//void ST7735_LCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
+
 bool ST7735_LCD::run(void *p){
 	QueueHandle_t qid = getSharedObject(sharedQueue_ID);
+	SemaphoreHandle_t semaphoreid = getSharedObject(sharedMutex_ID);
 	DATA data;
-	//y x
-	//drawPixel(159,127, ST7735_RED);
 
-	static uint16_t adcSum = 0;
+	static uint8_t state = 0;
+	static uint8_t isStart = 1;
+	static int16_t tempx_1, tempx_2,tempy_1,tempy_2;
+
 	if(xQueueReceive(qid, &data, portMAX_DELAY)){
-		//adcSum += (data.adcValue >> 4);
-		//if(data.time % 2 == 0) {
-			adcSum = adcSum / 2;
-			drawPixel(X_START - (data.time % 160), Y_START -data.adcValue, ST7735_RED);
-			adcSum = 0;
-		//}
-		//u0_dbg_printf("time %d data %x", data.time, data.adcValue);
-		//vTaskDelay(100);
-		//u0_dbg_printf("adcval %x\n", data.adcValue);*/
 
-		//delay_ms(1000);
-		//Storage::append("1:data.txt", buffer, strlen(buffer), SEEK_SET);
-		//printf("The value of time is%i\n",time);
-		//time++;
+		if(xSemaphoreTake(semaphoreid,1000)){
+			//to clear screen
+			if(data.time % 160 == 0 && isStart == 0){
+				state = 0;
+				fillrect(0, 0, ST7735_TFTWIDTH, ST7735_TFTHEIGHT, ST7735_BLACK);
+			}
+
+			if(state == 0) {
+				isStart = 0;
+				tempx_1 = (data.time % 160);
+				tempy_1 = data.adcValue;
+				state = 1;
+			} else if(state == 1) {
+				tempx_2 = (data.time % 160);
+				tempy_2 = data.adcValue;
+				drawLine2(X_START - tempx_1, tempy_1, X_START - tempx_2, tempy_2, ST7735_RED);
+				state = 3;
+			} else if (state ==2 ){
+				// fill line for temp values
+				drawLine2(X_START - tempx_1, tempy_1, X_START - tempx_2, tempy_2, ST7735_RED);
+				state = 3;
+			} else if (state == 3) {
+				tempx_1 = tempx_2;
+				tempy_1 = tempy_2;
+				tempx_2 = (data.time % 160);
+				tempy_2 = data.adcValue;
+				state = 2;
+			}
+			xSemaphoreGive(semaphoreid);
 	}
-
-
-	delay_ms(500);
+}
+	delay_ms(200);
 	return true;
 }
 
@@ -256,6 +274,42 @@ void ST7735_LCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
 	LCD_writedata(color >> 8);
 	LCD_writedata(color);
 //	writeRGB(color, 1);
+}
+
+
+void ST7735_LCD::drawLine2(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {
+	int16_t steep = abs(y1 - y0) > abs(x1 - x0);
+	if (steep) {
+		swap(x0, y0);
+		swap(x1, y1);
+	}
+	if (x0 > x1) {
+		swap(x0, x1);
+		swap(y0, y1);
+	}
+
+	int16_t dx, dy;
+	dx = x1 - x0;
+	dy = abs(y1 - y0);
+	int16_t err = dx / 2;
+	int16_t ystep;
+	if (y0 < y1) {
+		ystep = 1;
+	} else {
+		ystep = -1;
+	}
+	for (; x0 <= x1; x0++) {
+		if (steep) {
+			drawPixel(y0, x0, color);
+		} else {
+			drawPixel(x0, y0, color);
+		}
+		err -= dy;
+		if (err < 0) {
+			y0 += ystep;
+			err += dx;
+		}
+	}
 }
 
 
