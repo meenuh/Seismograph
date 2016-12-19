@@ -5,7 +5,9 @@
  *      Author: andre
  */
 #include "HTC_Bluetooth.hpp"
+
 #include "printf_lib.h"
+
 HTC_Bluetooth::HTC_Bluetooth(uint8_t priority) :
 		scheduler_task("Bluetooth", 2048, priority) {
 }
@@ -75,13 +77,22 @@ return true;
 
 
 bool HTC_Bluetooth::run(void *p){
+
+	if(xSemaphoreTake(getSharedObject(sharedBinary_ID), 100)){
+		UART2_putChar('\n');
+		UART2_putChar('E');
+		UART2_putChar('A');
+		UART2_putChar('R');
+		UART2_putChar('T');
+		UART2_putChar('H');
+		UART2_putChar('Q');
+		UART2_putChar('U');
+		UART2_putChar('A');
+		UART2_putChar('K');
+		UART2_putChar('E');
+	}
 	//printf("I am here\n");
-	UART2_putChar('\n');
-	UART2_putChar('A');
-	UART2_putChar('T');
-	UART2_putChar('H');
-	UART2_putChar('i');
-	u0_dbg_printf("The first letter is:%c",UART2_getChar());
+//	u0_dbg_printf("The first letter is:%c",UART2_getChar());
 //	u0_dbg_printf("The second letter is:%c",UART2_getChar());
 	//vTaskDelay(1000);
 	return true;

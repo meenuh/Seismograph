@@ -17,6 +17,7 @@
 typedef enum {
 	sharedQueue_ID,	// This is the shared id between both tasks
 	sharedMutex_ID,
+	sharedBinary_ID
 } sharedHandleId_t;
 
 typedef struct data{

@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <LPC17xx.h> //for memory mapped values
 
+#include "Analog_To_Digital.hpp"
+
 class HTC_Bluetooth: public scheduler_task {
 public:
 	HTC_Bluetooth(uint8_t priority);

@@ -43,6 +43,9 @@ bool Analog_To_Digital::init() {
 	mutexHandle = xSemaphoreCreateMutex();
 	addSharedObject(sharedMutex_ID, mutexHandle);
 
+	SemaphoreHandle_t binaryHandle = xSemaphoreCreateBinary();
+	addSharedObject(sharedBinary_ID, binaryHandle);
+
 	return true;
 }
 
@@ -53,12 +56,17 @@ bool Analog_To_Digital::run(void *p) {
 	while((LPC_ADC->ADGDR & (1 << 31)) == 0);
 
 	adcResults = (LPC_ADC->ADGDR >> 4) & 0xFFF;
+	if(adcResults > 0xB00){
+		xSemaphoreGive(getSharedObject(sharedBinary_ID));
+	}
 	data.adcValue = adcResults >> 4;
 	data.time = time;
 
 //	xQueueSend(getSharedObject(sharedQueue_ID), &data, portMAX_DELAY); // sends the value in the queue
 
 	sprintf(buffer, "%i, %x\n", time, adcResults);
+
+//	xSemaphoreTake(getSharedObject(sharedBinary_ID));
 
 	if(xSemaphoreTake(getSharedObject(sharedMutex_ID), 1000)){
 		//char *ptr;
