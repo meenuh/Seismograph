@@ -81,7 +81,7 @@ bool HTC_Bluetooth::run(void *p){
 	UART2_putChar('T');
 	UART2_putChar('H');
 	UART2_putChar('i');
-//	u0_dbg_printf("The first letter is:%c",UART2_getChar());
+	u0_dbg_printf("The first letter is:%c",UART2_getChar());
 //	u0_dbg_printf("The second letter is:%c",UART2_getChar());
 	//vTaskDelay(1000);
 	return true;

@@ -7,6 +7,7 @@
 
 #include "ST7735_LCD.hpp"
 #include "Analog_To_Digital.hpp"
+//#include "Joystick.hpp"
 
 //part one
 static const uint8_t commands[] = {                 // Init for 7735R, part 1 (red or green tab)
@@ -100,6 +101,7 @@ bool ST7735_LCD::init(){
 bool ST7735_LCD::run(void *p){
 	QueueHandle_t qid = getSharedObject(sharedQueue_ID);
 	SemaphoreHandle_t semaphoreid = getSharedObject(sharedMutex_ID);
+
 	DATA data;
 
 	static uint8_t state = 0;
