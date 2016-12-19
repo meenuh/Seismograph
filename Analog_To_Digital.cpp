@@ -52,10 +52,6 @@ bool Analog_To_Digital::run(void *p) {
 	LPC_ADC->ADCR |= (1 << 24);			// This starts the A/D converter to start
 	while((LPC_ADC->ADGDR & (1 << 31)) == 0);
 
-	uint8_t channel = LPC_ADC->ADGDR >> 24;
-	if(channel & 0xF )
-
-	if(LPC_ADC->ADGDR & (5 >> 24) == 0)
 	adcResults = (LPC_ADC->ADGDR >> 4) & 0xFFF;
 	data.adcValue = adcResults >> 4;
 	data.time = time;
@@ -67,8 +63,6 @@ bool Analog_To_Digital::run(void *p) {
 	if(xSemaphoreTake(getSharedObject(sharedMutex_ID), 1000)){
 		//char *ptr;
 		Storage::append("1:data.txt", buffer, strlen(buffer), SEEK_SET);
-		//Storage::read("2:data.txt", buffer, MAX);
-		//ptr = strtok(buffer, ", ");
 
 		xQueueSend(getSharedObject(sharedQueue_ID), &data, portMAX_DELAY);
 		//u0_dbg_printf("reading from card: %s\n", buffer);
